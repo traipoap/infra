@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+
+    - name: Install Flux CLI on Master node
+      shell: curl -s https://fluxcd.io/install.sh | sudo bash
+      args:
+        creates: /usr/local/bin/flux
+
+    - name: Bootstrap Flux to bind cluster with GitHub
+      shell: |
+        flux bootstrap github \
+          --components-extra=image-reflector-controller,image-automation-controller,source-watcher \
+          --owner={{ github_owner }} \
+          --repository={{ github_repo }} \
+          --branch=main \
+          --path=./clusters/{{ cluster_name }} \
+          --read-write-key \
+          --personal
+
+      environment:
+        GITHUB_TOKEN: "{{ app_git_secret_env }}"
+        KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+      run_once: true
+      ignore_errors: true

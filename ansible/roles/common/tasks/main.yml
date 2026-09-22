@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Update apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install common packages
+  apt:
+    name:
+      - git
+      - btop
+      - fish
+      - curl
+      - net-tools
+      - nfs-common
+
+    state: present
+
+- name: Enable and start qemu-guest-agent
+  systemd:
+    name: qemu-guest-agent
+    enabled: true
+    state: started

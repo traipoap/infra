@@ -1,0 +1,12 @@
+[load_balance]
+10.10.16.4 ansible_user=traipoap
+
+[k3s_masters]
+10.10.16.11 ansible_user=traipoap
+
+[k3s_workers]
+10.10.16.21 ansible_user=traipoap
+
+[k3s_cluster:children]
+k3s_masters
+k3s_workers

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Install FluxCD
+  hosts: k3s_masters
+  become: true
+
+  vars:
+    # Environment variable lookup (from shell or sourced .env)
+    app_git_secret_env: "{{ lookup('env', 'APP_GIT_SECRET') }}"
+
+    # Create GitOps and git app secrets — priority: 1) env var → 2) user input
+    github_owner: "traipoap"
+    github_repo: "fleet-infra"
+    cluster_name: "staging"
+
+  tasks:
+    - name: Debug Github PAT
+      ansible.builtin.debug:
+        msg:
+          - "Source: {{ 'environment variables' if app_git_secret_env else 'please provide via APP_GIT_SECRET environment variable' }}"
+          - "APP_GIT_SECRET is set (Length: {{ app_git_secret_env | length }})"
+
+  roles:
+    - fluxcd

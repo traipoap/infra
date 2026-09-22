@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+
+    - name: Install K3s server
+      shell: |
+        curl -sfL https://get.k3s.io | sh -s - server \
+          --node-ip={{ groups['k3s_masters'][0] }} \
+          --write-kubeconfig-mode 644 \
+          --cluster-init \
+          --disable=traefik \
+          --disable=local-storage \
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Ensure KUBECONFIG is set in .bashrc
+      ansible.builtin.lineinfile:
+        path: /root/.bashrc
+        line: 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml'
+        regexp: '^export KUBECONFIG='
+        state: present
+        create: yes
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Ensure K3s is started
+      systemd:
+        name: k3s
+        state: started
+        enabled: true

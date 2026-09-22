@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+
+  # 0. Find disk by size 100G automatically
+  - name: Find disk by size 100G automatically
+    set_fact:
+      target_disk: "/dev/{{ item.key }}"
+    loop: "{{ ansible_facts['devices'] | dict2items }}"
+    when: "'100' in item.value.size"
+
+  # 1. Update and Install Core Packages
+  - name: Install fundamental packages (NFS)
+    apt:
+      update_cache: yes
+      name:
+        - parted
+        - nfs-kernel-server
+      state: present
+
+  # 2. Configure NFS Server
+  - name: Create NFS export directory
+    file:
+      path: "{{ nfs_mount_point }}"
+      state: directory
+      mode: '0777'
+
+  - name: Configure /etc/exports for NFS
+    template:
+      src: "exports.j2"
+      dest: "/etc/exports"
+    notify: Restart NFS
+
+  # 3. DISK PREPARATION (The most important part for sda or sdb) ---
+  - name: Check if {{ target_disk }} is already partitioned
+    command: lsblk {{ target_disk }}
+    register: lsblk_output
+    changed_when: false
+
+  - name: Create partition on {{ target_disk }} (Single large partition for both NFS and Garage)
+    parted:
+      device: "{{ target_disk }}"
+      number: 1
+      state: present
+      label: msdos
+
+  - name: Format {{ target_disk }}1 as ext4
+    filesystem:
+      fstype: ext4
+      dev: "{{ target_disk }}1"
+
+  - name: Create mount point for {{ target_disk }}1
+    file:
+      path: "{{nfs_mount_point}}"
+      state: directory
+
+  - name: Mount {{ target_disk }}1 to {{nfs_mount_point}}
+    mount:
+      path: "{{nfs_mount_point}}"
+      src: "{{ target_disk }}1"
+      fstype: ext4
+      state: mounted

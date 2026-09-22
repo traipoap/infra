@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Disable IPv6
+  hosts: all
+  become: true
+  tasks:
+    - name: Disable IPv6
+      sysctl:
+        # Same like sudo -S sysctl -w net.ipv6.conf.all.disable_ipv6=1 > /dev/null
+        name: net.ipv6.conf.all.disable_ipv6
+        value: 1
+        state: present
+    - name: Disable IPv6 by default
+      sysctl:
+        # Same like sudo -S sysctl -w net.ipv6.conf.default.disable_ipv6=1 > /dev/null
+        name: net.ipv6.conf.default.disable_ipv6
+        value: 1
+        state: present
+    - name: Disable IPv6 on loopback
+      sysctl:
+        name: net.ipv6.conf.lo.disable_ipv6
+        value: 1
+        state: present

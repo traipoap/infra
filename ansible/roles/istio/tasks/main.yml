@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+
+    - name: Download and Install Istio CLI to System Path
+      shell: |
+        curl -L https://istio.io/downloadIstio | ISTIO_VERSION={{ istio_version }} TARGET_ARCH=x86_64 TARGET_OS=Linux sh -
+        cp istio-{{ istio_version }}/bin/istioctl /usr/local/bin/istioctl
+        rm -rf istio-{{ istio_version }}
+      args:
+        creates: /usr/local/bin/istioctl
+
+    - name: Install Istio with Ambient Profile (Fixed CNI Bin Path)
+      shell: |
+        istioctl install --set profile=ambient \
+          --set values.cni.cniConfDir=/var/lib/rancher/k3s/agent/etc/cni/net.d \
+          --set values.cni.cniBinDir=/var/lib/rancher/k3s/data/cni \
+          --set values.cni.privileged=true \
+          --skip-confirmation
+      register: istio_install
+      changed_when: "'Installation complete' in istio_install.stdout"
+      environment:
+        KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+
+    - name: Install Kubernetes Gateway API (CRID)
+      shell: |
+        if ! kubectl get crd gateways.gateway.networking.k8s.io 2>/dev/null; then
+          kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/{{ gatewayapi_version }}/experimental-install.yaml
+        fi
+      register: gateway_api_install
+      changed_when: "'created' in gateway_api_install.stdout or 'configured' in gateway_api_install.stdout"

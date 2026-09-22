@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: Apache-2.0
+
+    # 1. Check if k3s-agent service exists and is active via systemd
+    - name: Check K3s Agent service status
+      command: systemctl is-active k3s-agent
+      register: k3s_service_status
+      changed_when: false
+      failed_when: false  # Prevents failure on non-zero exit codes (inactive/failed)
+
+    # 2. Display the result
+    - name: Display K3s Agent service status
+      debug:
+        msg: "k3s-agent service status: {{ k3s_service_status.stdout }}"
+
+    # 3. Logic: If service is NOT active or NOT found, then Install and Join
+    - name: Install and Join K3s Agent to Cluster
+      when: k3s_service_status.rc != 0
+      block:
+        - name: Create temporary setup script
+          copy:
+            dest: /tmp/k3s_install.sh
+            mode: '0755'
+            content: |
+              #!/bin/bash
+              curl -sfL https://get.k3s.io | K3S_URL=https://{{ master_ip }}:6443 K3S_TOKEN={{ cluster_token }} sh -s - agent \
+              --node-ip={{ ansible_facts.default_ipv4.address }}
+
+        - name: Execute K3s Agent Installation
+          shell: /tmp/k3s_install.sh
+          register: install_output
+
+        - name: Cleanup installation script
+          file:
+            path: /tmp/k3s_install.sh
+            state: absent
+
+        - name: Show installation output
+          debug:
+            var: install_output.stdout_lines
+
+      rescue:
+        # If installation fails (e.g., Network down or wrong Token), notify clearly
+        - name: Handle Installation Failure
+          fail:
+            msg: "K3s Agent installation failed! Please check connectivity to {{ master_ip }} or the Cluster Token."
+
+    # 4. Final Verification: Check if service is now running after our action
+    - name: Verify K3s Agent is Up and Running
+      command: systemctl is-active k3s-agent
+      register: final_check
+      changed_when: false
+      failed_when: final_check.rc != 0
+
+    - name: Success Message
+      debug:
+        msg: "K3s Agent is running perfectly on {{ inventory_hostname }}!"
