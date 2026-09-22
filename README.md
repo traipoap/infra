@@ -144,7 +144,7 @@ Set `var.cluster_node_counts` (e.g. `{ super = 1, master = 3, worker = 3 }`) and
 - A Proxmox user with API access
 - Terraform CLI and an HCP Terraform account (backend: org `traipoap`, workspace `proxmox`) — or switch `backend.tf` to a local backend
 - Ansible on the control machine, and key-based SSH access to the VMs (the cloud-init snippet injects your keys)
-- A GitHub repository for Flux (default: `traipoap/fleet-infra`) and a personal access token with **read/write contents** permission (Flux bootstraps with `--read-write-key`)
+- A GitHub repository for Flux (default: `traipoap/gitops`) and a personal access token with **read/write contents** permission (Flux bootstraps with `--read-write-key`)
 
 ### 1. Clone the repository
 
@@ -212,7 +212,7 @@ export GARAGE_DEFAULT_SECRET_KEY="$(openssl rand -hex 32)"
 | `02-servicemesh` | Installs Istio (ambient profile, CNI dirs tuned for K3s) and the Gateway API CRDs |
 | `03-storage-networking` | Finds the ~100 GB disk, formats ext4, mounts `/nfs`, exports it, runs nfs-kernel-server |
 | `04-garage-deploy` | Installs Garage 2.3.0 (single-node) on the super-node with a hardened systemd unit; data on `/nfs/data` |
-| `05-gitops-bootstrap` | Installs the Flux CLI and runs `flux bootstrap github` (owner `traipoap`, repo `fleet-infra`, branch `main`, path `./clusters/staging`, `--read-write-key --personal`, plus image-reflector/image-automation/source-watcher components) |
+| `05-gitops-bootstrap` | Installs the Flux CLI and runs `flux bootstrap github` (owner `traipoap`, repo `gitops`, branch `main`, path `./clusters/staging`, `--read-write-key --personal`, plus image-reflector/image-automation/source-watcher components) |
 
 You can also run any playbook individually:
 
@@ -248,11 +248,11 @@ Playbook `05-gitops-bootstrap` runs on the first master:
 ```bash
 flux bootstrap github \
   --components-extra=image-reflector-controller,image-automation-controller,source-watcher \
-  --owner=traipoap --repository=fleet-infra --branch=main \
+  --owner=traipoap --repository=gitops --branch=main \
   --path=./clusters/staging --read-write-key --personal
 ```
 
-- Flux provisions itself in the cluster and creates a GitHub App / PAT to sync `traipoap/fleet-infra`
+- Flux provisions itself in the cluster and creates a GitHub App / PAT to sync `traipoap/gitops`
 - The watched path is `./clusters/staging` on branch `main` — commit Kubernetes manifests, Kustomizations, HelmReleases, ImagePolicies there and the cluster follows
 - `--read-write-key` lets Flux push back (e.g. Flux-generated resources)
 - The extra controllers enable **automatic image tag updates** (ImageReflectionController + ImageAutomationController) and non-K8s source watching
