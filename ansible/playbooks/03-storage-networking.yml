@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Deploy Lumina Super-Node (NFS)
+  hosts: load_balance
+  become: true
+  vars:
+    nfs_mount_point: "/nfs"
+
+  roles:
+    - nfs
+
+  handlers:
+    - name: Restart NFS
+      service: name=nfs-kernel-server state=restarted

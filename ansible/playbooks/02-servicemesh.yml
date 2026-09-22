@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Install Istio
+  hosts: k3s_masters
+  become: true
+  vars:
+    istio_version: 1.30.4
+    gatewayapi_version: v1.6.1
+
+  roles:
+    - istio

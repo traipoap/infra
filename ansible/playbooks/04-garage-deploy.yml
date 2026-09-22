@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Deploy Garage
+  hosts: load_balance
+  become: true
+
+  vars:
+    garage_version: "2.3.0"
+    garage_binaries_dir: /usr/local/bin
+    garage_main_binary: "/usr/local/bin/garage"
+    garage_system_user: "garage"
+    garage_system_group: "garage"
+    garage_logging: "netapp=info,garage=info"
+    garage_architecture: "{{ansible_architecture}}"
+
+    garage_local_template: "garage.toml.j2"
+    garage_config_file: "/etc/garage.toml"
+    garage_metadata_dir: "/var/lib/garage"
+    garage_data_dir: "/nfs/data"
+
+    # Priority: 1) env var → 2) user input → 3) auto-generate
+    rpc_secret_env: "{{ lookup('env', 'RPC_SECRET') }}"
+    admin_token_env: "{{ lookup('env', 'ADMIN_TOKEN') }}"
+    access_key_env: "{{ lookup('env', 'GARAGE_DEFAULT_ACCESS_KEY') }}"
+    secret_key_env: "{{ lookup('env', 'GARAGE_DEFAULT_SECRET_KEY') }}"
+
+    my_rpc_secret: >-
+      {{ rpc_secret_env | default(lookup('password', '/dev/null chars=hexdigits length=64'), true) }}
+    my_admin_token: >-
+      {{ admin_token_env | default(lookup('password', '/dev/null chars=ascii_letters,digits length=64'), true) }}
+
+    garage_service_template: "garage.service.j2"
+    garage_systemd_service: "garage"
+
+    GARAGE_DEFAULT_ACCESS_KEY: >-
+      {{ access_key_env | default('GK' + lookup('password', '/dev/null chars=hexdigits length=32'), true) }}
+    GARAGE_DEFAULT_SECRET_KEY: >-
+      {{ secret_key_env | default(lookup('password', '/dev/null chars=hexdigits length=64'), true) }}
+    GARAGE_DEFAULT_BUCKET: "default-bucket"
+
+  tasks:
+    - name: Display credentials (Securely)
+      ansible.builtin.debug:
+        msg:
+          - "Source: {{ 'environment variables' if rpc_secret_env else 'user input / auto-generated' }}"
+          - "RPC Secret: {{ my_rpc_secret | regex_replace('(.{4}).*?(.{4})', '\\1...\\2') }}"
+          - "Admin Token: {{ my_admin_token | regex_replace('(.{4}).*?(.{4})', '\\1...\\2') }}"
+          - "Access Key: {{ GARAGE_DEFAULT_ACCESS_KEY | regex_replace('(.{4}).*?(.{4})', '\\1...\\2') }}"
+          - "Secret Key: {{ GARAGE_DEFAULT_SECRET_KEY | regex_replace('(.{4}).*?(.{4})', '\\1...\\2') }}"
+
+  handlers:
+    - name: reload systemd
+      systemd: daemon_reload=yes
+    - name: restart garage
+      systemd: name={{garage_systemd_service}} state=restarted
+    - name: Check garage status
+      systemd: name={{garage_systemd_service}} state=started
+
+  roles:
+    - garage

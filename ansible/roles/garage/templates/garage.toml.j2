@@ -1,0 +1,30 @@
+# Managed by Ansible
+
+metadata_dir = "{{ garage_metadata_dir }}"
+data_dir = "{{ garage_data_dir }}"
+db_engine = "lmdb"
+
+replication_factor = 1
+block_size = 1048576
+compression_level = 1
+
+rpc_bind_addr = "{{ ansible_facts.default_ipv4.address }}:3901"
+rpc_public_addr = "{{ ansible_facts.default_ipv4.address }}:3901"
+rpc_secret = "{{ my_rpc_secret }}"
+
+bootstrap_peers = []
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage.localhost"
+index = "index.html"
+
+[admin]
+api_bind_addr = "[::1]:3903"
+admin_token = "{{ my_admin_token }}"
+metrics_token = "{{ my_admin_token }}"
