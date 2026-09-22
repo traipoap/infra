@@ -1,4 +1,4 @@
-# K3s GitOps Platform on Proxmox
+# Infra — K3s Platform on Proxmox
 
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s-326ce5)
 ![GitOps](https://img.shields.io/badge/GitOps-FluxCD-5468ff)
