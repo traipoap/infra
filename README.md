@@ -108,7 +108,7 @@ Set `var.cluster_node_counts` (e.g. `{ super = 1, master = 3, worker = 3 }`) and
 │   │   ├── 04-garage-deploy.yml           # Garage S3 on the super-node
 │   │   ├── 05-gitops-bootstrap.yml        # FluxCD bootstrap from GitHub
 │   │   ├── quickstart.sh                  # runs all playbooks in order
-│   │   └── files/                         # fetched kubeconfig (k3s-kubeconfig.yaml)
+│   │   └── files/                         # fetched kubeconfig (k3s-kubeconfig.yaml, gitignored)
 │   └── roles/
 │       ├── common/                        # base packages, qemu-guest-agent
 │       ├── fluxcd/                        # Flux CLI + GitHub bootstrap
