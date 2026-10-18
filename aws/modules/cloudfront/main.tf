@@ -67,7 +67,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     origin_id = "K3s-Lambda-OriginGroup"
 
     failover_criteria {
-      status_codes = [500, 502, 503, 504]
+      status_codes = [404, 500, 502, 503, 504]
     }
 
     member {
@@ -84,7 +84,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     origin_id = "K3s-S3-OriginGroup"
 
     failover_criteria {
-      status_codes = [500, 502, 503, 504]
+      status_codes = [404, 500, 502, 503, 504]
     }
 
     member {
