@@ -111,6 +111,9 @@ resource "proxmox_virtual_environment_vm" "nodes" {
 
   # --- Cloud-config for K3s Worker (agent only, joins the master) ---
   initialization {
+    # Provider defaults the cloud-init disk to 'local-lvm'; point it at the
+    # role's root-disk datastore instead (must be a VM-disk-capable storage).
+    datastore_id = each.value.disks[0].datastore_id
     user_data_file_id = proxmox_virtual_environment_file.cloud_configs[each.key].id
     ip_config {
       ipv4 {

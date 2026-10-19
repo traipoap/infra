@@ -118,35 +118,35 @@ variable "cluster_node_specs" {
     super = {
       vm_id_base = 200
       name_base  = "super-node"
-      clone_vm_id = 2000
+      clone_vm_id = 9000
       cpu_cores  = 1
       ram_mb     = 2048
       ip_base    = 4
       disks = [
-        { datastore_id = "data-st1000", interface = "scsi0", size = 32 },
-        { datastore_id = "data-st1000", interface = "scsi1", size = 100 }
+        { datastore_id = "bucket", interface = "scsi0", size = 32 },
+        { datastore_id = "bucket", interface = "scsi1", size = 100 }
       ]
     }
     master = {
       vm_id_base = 210
       name_base  = "k3s-master"
-      clone_vm_id = 4000
+      clone_vm_id = 9100
       cpu_cores  = 2
       ram_mb     = 8192
       ip_base    = 11
       disks = [
-        { datastore_id = "system-hs512", interface = "scsi0", size = 32 }
+        { datastore_id = "master", interface = "scsi0", size = 32 }
       ]
     }
     worker = {
       vm_id_base = 220
       name_base  = "k3s-worker"
-      clone_vm_id = 3000
+      clone_vm_id = 9200
       cpu_cores  = 2
       ram_mb     = 8192
       ip_base    = 21
       disks = [
-        { datastore_id = "st500", interface = "scsi0", size = 32 }
+        { datastore_id = "worker", interface = "scsi0", size = 32 }
       ]
     }
   }
