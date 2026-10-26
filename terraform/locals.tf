@@ -4,6 +4,7 @@
 locals {
   cluster_nodes = merge(
     { for i in range(var.cluster_node_counts.super) : "super-node-${i + 1}" => {
+        node_name   = var.cluster_node_specs.super.node_name
         vm_id       = var.cluster_node_specs.super.vm_id_base + i
         role        = "super"
         cpu_cores   = var.cluster_node_specs.super.cpu_cores
@@ -15,6 +16,7 @@ locals {
       }
     },
     { for i in range(var.cluster_node_counts.master) : "k3s-master-${i + 1}" => {
+        node_name   = var.cluster_node_specs.master.node_name
         vm_id       = var.cluster_node_specs.master.vm_id_base + i
         role        = "master"
         cpu_cores   = var.cluster_node_specs.master.cpu_cores
@@ -26,6 +28,7 @@ locals {
       }
     },
     { for i in range(var.cluster_node_counts.worker) : "k3s-worker-${i + 1}" => {
+        node_name   = var.cluster_node_specs.worker.node_name
         vm_id       = var.cluster_node_specs.worker.vm_id_base + i
         role        = "worker"
         cpu_cores   = var.cluster_node_specs.worker.cpu_cores

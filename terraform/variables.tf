@@ -3,17 +3,17 @@
 # Networking
 variable "network_bridge" {
   type    = string
-  default = "vmbr16"
+  default = "vmbr0"
 }
 
 variable "cluster_subnet" {
   type        = string
-  default     = "10.10.16.0/24"
+  default     = "192.168.1.0/24"
 }
 
 variable "gateway_ip" {
   type    = string
-  default = "10.10.16.1"
+  default = "192.168.1.1"
 }
 
 variable "dns_servers" {
@@ -49,10 +49,6 @@ variable "datastore_id" {
   default = "local"
 }
 
-variable "node_name" {
-  type    = string
-  default = "local"
-}
 variable "timezone" {
   type    = string
   default = "Asia/Bangkok"
@@ -102,6 +98,7 @@ variable "cluster_node_counts" {
 #   ip    = <ip_base>    + (N - 1)
 variable "cluster_node_specs" {
   type = map(object({
+    node_name   = string
     vm_id_base = number
     name_base  = string
     cpu_cores  = number
@@ -116,18 +113,20 @@ variable "cluster_node_specs" {
   }))
   default = {
     super = {
+      node_name  = "pve"
       vm_id_base = 200
       name_base  = "super-node"
-      clone_vm_id = 9000
-      cpu_cores  = 1
+      clone_vm_id = 9300
+      cpu_cores  = 2
       ram_mb     = 2048
       ip_base    = 4
       disks = [
-        { datastore_id = "bucket", interface = "scsi0", size = 32 },
-        { datastore_id = "bucket", interface = "scsi1", size = 100 }
+        { datastore_id = "local-lvm", interface = "scsi0", size = 32 },
+        { datastore_id = "local-lvm", interface = "scsi1", size = 64 }
       ]
     }
     master = {
+      node_name  = "local"
       vm_id_base = 210
       name_base  = "k3s-master"
       clone_vm_id = 9100
@@ -139,6 +138,7 @@ variable "cluster_node_specs" {
       ]
     }
     worker = {
+      node_name  = "local"
       vm_id_base = 220
       name_base  = "k3s-worker"
       clone_vm_id = 9200

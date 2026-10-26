@@ -43,7 +43,7 @@ resource "proxmox_virtual_environment_file" "cloud_configs" {
 
   content_type = "snippets"
   datastore_id = var.datastore_id
-  node_name    = var.node_name
+  node_name    = each.value.node_name
 
   source_raw {
     data      = <<-EOF
@@ -74,7 +74,7 @@ resource "proxmox_virtual_environment_vm" "nodes" {
   for_each = local.cluster_nodes
 
   name      = each.key
-  node_name = var.node_name
+  node_name = each.value.node_name
   vm_id     = each.value.vm_id
 
   clone {
