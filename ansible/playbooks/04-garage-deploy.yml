@@ -5,7 +5,7 @@
   become: true
 
   vars:
-    garage_version: "2.3.0"
+    garage_version: "2.5.0"
     garage_binaries_dir: /usr/local/bin
     garage_main_binary: "/usr/local/bin/garage"
     garage_system_user: "garage"

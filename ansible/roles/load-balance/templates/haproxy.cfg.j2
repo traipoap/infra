@@ -44,9 +44,9 @@ backend webservers
     mode http
     cookie JSESSIONID insert indirect nocache
 
-    server m1 10.10.16.11:80 check cookie m1
+    server m1 192.168.1.11:80 check cookie m1
 
-    server w1 10.10.16.21:80 check cookie w1
+    server w1 192.168.1.21:80 check cookie w1
 
 
 # =====================================================================
@@ -62,9 +62,9 @@ backend syslog_tcp_backend
     mode tcp
     balance source
 
-    server m1 10.10.16.11:30514 check
+    server m1 192.168.1.11:30514 check
 
-    server w1 10.10.16.21:30514 check
+    server w1 192.168.1.21:30514 check
 
 # =====================================================================
 # 2. HANDLE UDP SYSLOG (Port 514)
@@ -83,6 +83,6 @@ backend syslog_udp_backend
 
     # Note the 'udp@' prefix required for UDP destinations
 
-    server m1 udp@10.10.16.11:30514
+    server m1 udp@192.168.1.11:30514
 
-    server w1 udp@10.10.16.21:30514
+    server w1 udp@192.168.1.21:30514

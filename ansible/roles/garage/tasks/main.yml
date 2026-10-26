@@ -11,10 +11,23 @@
     - "garage_architecture = {{ garage_architecture }}"
   run_once: true
 
+- name: Print garage download link
+  debug:
+    msg: "https://garagehq.deuxfleurs.fr/_releases/v{{garage_version}}/{{garage_architecture}}-unknown-linux-musl/garage"
+  run_once: true
+
 - name: Download garage version {{garage_version}} for {{garage_architecture}}
-  get_url:
-    url: https://garagehq.deuxfleurs.fr/_releases/v{{garage_version}}/{{garage_architecture}}-unknown-linux-musl/garage
-    dest: "{{garage_binaries_dir}}/garage-{{garage_version}}"
+  command: >
+    curl -fL --progress-bar
+    -o {{garage_binaries_dir}}/garage-{{garage_version}}
+    https://garagehq.deuxfleurs.fr/_releases/v{{garage_version}}/{{garage_architecture}}-unknown-linux-musl/garage
+  args:
+    creates: "{{garage_binaries_dir}}/garage-{{garage_version}}"
+  tags: [download]
+
+- name: Set garage binary permissions
+  file:
+    path: "{{garage_binaries_dir}}/garage-{{garage_version}}"
     mode: "755"
   tags: [download]
 

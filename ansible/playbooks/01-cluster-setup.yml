@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
-- name: Deploy Lumina Super-Node (LB + S3 + NFS + Vector)
+- name: Deploy Lumina Super-Node (LB)
   hosts: load_balance
   become: true
   roles:
+    - common
     - load-balance
 
   handlers:
@@ -16,7 +17,7 @@
   vars:
     is_first_master: "{{ inventory_hostname == groups['k3s_masters'][0] }}"
   roles:
-    - runtime
+    # - runtime
     - role: k3s-server
       when: is_first_master
     - common
@@ -120,7 +121,7 @@
     cluster_token: "{{ hostvars[groups['k3s_masters'][0]]['k3s_cluster_token'] }}"
     master_ip: "{{ groups['k3s_masters'][0] }}"
   roles:
-    - runtime
+    # - runtime
     - k3s-agent
     - common
 

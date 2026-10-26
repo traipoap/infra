@@ -5,7 +5,7 @@
     set_fact:
       target_disk: "/dev/{{ item.key }}"
     loop: "{{ ansible_facts['devices'] | dict2items }}"
-    when: "'100' in item.value.size"
+    when: "'64' in item.value.size"
 
   # 1. Update and Install Core Packages
   - name: Install fundamental packages (NFS)
