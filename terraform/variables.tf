@@ -105,7 +105,7 @@ variable "cluster_node_specs" {
         name        = "controlplan-1"
         clone_vm_id = 9000
         cpu_cores   = 2
-        ram_mb      = 2048
+        ram_mb      = 4098
         ip          = 11
         disks = [
           { datastore_id = "master", interface = "scsi0", size = 32 }
