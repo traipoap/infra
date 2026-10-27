@@ -98,3 +98,25 @@ backend syslog_udp_backend
 %{ for i, ip in worker_nodes ~}
     server w${i + 1} udp@${ip}:30514
 %{ endfor ~}
+
+# =====================================================================
+# 3. KUBERNETES API (kubectl) — LB -> Control Plane (Port 6443)
+# =====================================================================
+frontend kubernetes_api
+    bind :6443
+    mode tcp
+    option tcplog
+    # K8s watches are long-lived; override the 50s defaults so idle streams aren't dropped
+    timeout client 1h
+    timeout server 1h
+    default_backend kubernetes_api
+
+backend kubernetes_api
+    mode tcp
+    balance roundrobin
+    stick-table type ip size 200k expire 30m
+    stick on src
+
+%{ for i, ip in master_nodes ~}
+    server m${i + 1} ${ip}:6443 check inter 2000 fall 3 rise 5
+%{ endfor ~}
