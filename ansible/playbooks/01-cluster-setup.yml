@@ -125,12 +125,15 @@
 
 - name: Replace server kubeconfig playbooks/files/k3s-kubeconfig.yaml
   hosts: localhost
+  vars:
+    # Route kubectl traffic through the load balancer; fall back to the first master if none is defined
+    k3s_api_server: "{{ (groups['load_balance'] + groups['k3s_masters']) | first }}"
   tasks:
     - name: Replace kubeconfig content
       ansible.builtin.replace:
         path: files/k3s-kubeconfig.yaml
         regexp: "server: https://127.0.0.1:6443"
-        replace: "server: https://{{ groups['k3s_masters'][0] }}:6443"
+        replace: "server: https://{{ k3s_api_server }}:6443"
     - name: Copy kubeconfig to local machine
       ansible.builtin.copy:
         src: files/k3s-kubeconfig.yaml
