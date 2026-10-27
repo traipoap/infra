@@ -130,8 +130,8 @@ variable "cluster_node_specs" {
       vm_id_base = 211
       name_base  = "controlplan"
       clone_vm_id = 9000
-      cpu_cores  = 2
-      ram_mb     = 2048
+      cpu_cores  = 4
+      ram_mb     = 4096
       ip_base    = 11
       disks = [
         { datastore_id = "master", interface = "scsi0", size = 32 }
@@ -142,8 +142,8 @@ variable "cluster_node_specs" {
       vm_id_base = 212
       name_base  = "controlplan"
       clone_vm_id = 9300
-      cpu_cores  = 2
-      ram_mb     = 2048
+      cpu_cores  = 4
+      ram_mb     = 4096
       ip_base    = 11
       disks = [
         { datastore_id = "local", interface = "scsi0", size = 32 }
@@ -155,7 +155,7 @@ variable "cluster_node_specs" {
       name_base  = "worker"
       clone_vm_id = 9100
       cpu_cores  = 2
-      ram_mb     = 2048
+      ram_mb     = 4096
       ip_base    = 21
       disks = [
         { datastore_id = "worker", interface = "scsi0", size = 32 }
@@ -167,7 +167,7 @@ variable "cluster_node_specs" {
       name_base  = "worker"
       clone_vm_id = 9300
       cpu_cores  = 2
-      ram_mb     = 2048
+      ram_mb     = 4096
       ip_base    = 21
       disks = [
         { datastore_id = "local", interface = "scsi0", size = 32 }

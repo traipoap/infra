@@ -8,7 +8,7 @@ terraform {
     }
   }
   cloud {
-    organization = "example"
+    organization = "traipoap"
     workspaces {
       name = "proxmox"
     }
