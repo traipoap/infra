@@ -30,7 +30,7 @@ Everything is repeatable from this repository — one `terraform apply` and one 
 ```mermaid
 flowchart TD
   TF["Terraform<br/>(bpg/proxmox + HCP state)"] -->|clone template VMs, cloud-init| SN["super-node<br/>HAProxy · NFS · Garage"]
-  TF -->|clone template VMs, cloud-init| M1["k3s-master-N<br/>K3s control plane · FluxCD · Istio"]
+  TF -->|clone template VMs, cloud-init| M1["controlplan-N<br/>K3s control plane · FluxCD · Istio"]
   TF -->|clone template VMs, cloud-init| W1["k3s-worker-N<br/>K3s agents · workloads"]
   TF -->|render inventory + HAProxy cfg| ANS["Ansible"]
   ANS --> SN
@@ -47,7 +47,7 @@ flowchart TD
 | Role | Runs | Default spec |
 |---|---|---|
 | `super-node` | HAProxy (L7 LB + syslog relay), NFS server, Garage (S3) | 1 vCPU, 2 GB RAM, 32 GB + 100 GB disks |
-| `k3s-master` | K3s control plane (embedded etcd), FluxCD, Istio control plane | 2 vCPU, 8 GB RAM, 32 GB disk |
+| `controlplan` | K3s control plane (embedded etcd), FluxCD, Istio control plane | 2 vCPU, 8 GB RAM, 32 GB disk |
 | `k3s-worker` | K3s agents, workload pods | 2 vCPU, 8 GB RAM, 32 GB disk |
 
 ### Default nodes (one per role)
@@ -55,7 +55,7 @@ flowchart TD
 | Name | VM ID | IP | Cloned from |
 |---|---|---|---|
 | `super-node-1` | 200 | 10.10.16.4 | template 2000 |
-| `k3s-master-1` | 210 | 10.10.16.11 | template 4000 |
+| `controlplan-1` | 210 | 10.10.16.11 | template 4000 |
 | `k3s-worker-1` | 220 | 10.10.16.21 | template 3000 |
 
 ### Scaling

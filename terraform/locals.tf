@@ -15,14 +15,14 @@ locals {
         disks       = var.cluster_node_specs.super.disks
       }
     },
-    { for i in range(var.cluster_node_counts.master) : "k3s-master-${i + 1}" => {
+    { for i in range(var.cluster_node_counts.master) : "controlplan-${i + 1}" => {
         node_name   = var.cluster_node_specs.master.node_name
         vm_id       = var.cluster_node_specs.master.vm_id_base + i
         role        = "master"
         cpu_cores   = var.cluster_node_specs.master.cpu_cores
         ram_mb      = var.cluster_node_specs.master.ram_mb
         ip_offset   = var.cluster_node_specs.master.ip_base + i
-        hostname    = "k3s-master-${i + 1}"
+        hostname    = "controlplan-${i + 1}"
         clone_vm_id = var.cluster_node_specs.master.clone_vm_id
         disks       = var.cluster_node_specs.master.disks
       }

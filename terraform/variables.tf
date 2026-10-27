@@ -86,7 +86,7 @@ variable "cluster_node_counts" {
     worker = number
   })
   default = {
-    super  = 1
+    super  = 0
     master = 1
     worker = 1
   }
@@ -112,41 +112,65 @@ variable "cluster_node_specs" {
     }))
   }))
   default = {
-    super = {
-      node_name  = "pve"
-      vm_id_base = 200
-      name_base  = "super-node"
-      clone_vm_id = 9300
-      cpu_cores  = 2
-      ram_mb     = 2048
-      ip_base    = 4
-      disks = [
-        { datastore_id = "local-lvm", interface = "scsi0", size = 32 },
-        { datastore_id = "local-lvm", interface = "scsi1", size = 64 }
-      ]
-    }
+    # super = {
+    #   node_name  = "pve"
+    #   vm_id_base = 200
+    #   name_base  = "super-node"
+    #   clone_vm_id = 9300
+    #   cpu_cores  = 2
+    #   ram_mb     = 2048
+    #   ip_base    = 4
+    #   disks = [
+    #     { datastore_id = "local-lvm", interface = "scsi0", size = 32 },
+    #     { datastore_id = "local-lvm", interface = "scsi1", size = 64 }
+    #   ]
+    # }
     master = {
       node_name  = "local"
-      vm_id_base = 210
-      name_base  = "k3s-master"
-      clone_vm_id = 9100
+      vm_id_base = 211
+      name_base  = "controlplan"
+      clone_vm_id = 9000
       cpu_cores  = 2
-      ram_mb     = 8192
+      ram_mb     = 2048
       ip_base    = 11
       disks = [
         { datastore_id = "master", interface = "scsi0", size = 32 }
       ]
     }
+    master = {
+      node_name  = "proxmox"
+      vm_id_base = 212
+      name_base  = "controlplan"
+      clone_vm_id = 9300
+      cpu_cores  = 2
+      ram_mb     = 2048
+      ip_base    = 11
+      disks = [
+        { datastore_id = "local", interface = "scsi0", size = 32 }
+      ]
+    }
     worker = {
       node_name  = "local"
-      vm_id_base = 220
-      name_base  = "k3s-worker"
-      clone_vm_id = 9200
+      vm_id_base = 221
+      name_base  = "worker"
+      clone_vm_id = 9100
       cpu_cores  = 2
-      ram_mb     = 8192
+      ram_mb     = 2048
       ip_base    = 21
       disks = [
         { datastore_id = "worker", interface = "scsi0", size = 32 }
+      ]
+    }
+    worker = {
+      node_name  = "proxmox"
+      vm_id_base = 222
+      name_base  = "worker"
+      clone_vm_id = 9300
+      cpu_cores  = 2
+      ram_mb     = 2048
+      ip_base    = 21
+      disks = [
+        { datastore_id = "local", interface = "scsi0", size = 32 }
       ]
     }
   }
