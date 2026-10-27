@@ -77,101 +77,78 @@ variable "ansible_haproxy_path" {
 }
 
 # --- Dynamic node scaling ---
-# How many VMs of each role to create.
-# e.g. super_nodes = 2, master_nodes = 2, worker_nodes = 2
-variable "cluster_node_counts" {
-  type = object({
-    super  = number
-    master = number
-    worker = number
-  })
-  default = {
-    super  = 0
-    master = 1
-    worker = 1
-  }
-}
-
-# Per-role VM specs. Node N (1-based) of a role gets:
-#   name = "<name_base>-N"
-#   vm_id = <vm_id_base> + (N - 1)
-#   ip    = <ip_base>    + (N - 1)
+# Each role maps to a LIST of VM specs: one entry = one VM.
+# Add/remove entries to scale a role, and set node_name per entry to
+# spread VMs across PVE nodes. (A map can only hold ONE value per key —
+# writing the same key twice silently drops all but the last entry.)
 variable "cluster_node_specs" {
-  type = map(object({
+  type = map(list(object({
     node_name   = string
-    vm_id_base = number
-    name_base  = string
-    cpu_cores  = number
-    ram_mb     = number
-    ip_base    = number
+    vm_id       = number
+    name        = string
+    cpu_cores   = number
+    ram_mb      = number
+    ip          = number
     clone_vm_id = number
     disks = list(object({
       datastore_id = string
       interface    = string
       size         = number
     }))
-  }))
+  })))
   default = {
-    # super = {
-    #   node_name  = "pve"
-    #   vm_id_base = 200
-    #   name_base  = "super-node"
-    #   clone_vm_id = 9300
-    #   cpu_cores  = 2
-    #   ram_mb     = 2048
-    #   ip_base    = 4
-    #   disks = [
-    #     { datastore_id = "local-lvm", interface = "scsi0", size = 32 },
-    #     { datastore_id = "local-lvm", interface = "scsi1", size = 64 }
-    #   ]
-    # }
-    master = {
-      node_name  = "local"
-      vm_id_base = 211
-      name_base  = "controlplan"
-      clone_vm_id = 9000
-      cpu_cores  = 4
-      ram_mb     = 4096
-      ip_base    = 11
-      disks = [
-        { datastore_id = "master", interface = "scsi0", size = 32 }
-      ]
-    }
-    master = {
-      node_name  = "proxmox"
-      vm_id_base = 212
-      name_base  = "controlplan"
-      clone_vm_id = 9300
-      cpu_cores  = 4
-      ram_mb     = 4096
-      ip_base    = 11
-      disks = [
-        { datastore_id = "local", interface = "scsi0", size = 32 }
-      ]
-    }
-    worker = {
-      node_name  = "local"
-      vm_id_base = 221
-      name_base  = "worker"
-      clone_vm_id = 9100
-      cpu_cores  = 2
-      ram_mb     = 4096
-      ip_base    = 21
-      disks = [
-        { datastore_id = "worker", interface = "scsi0", size = 32 }
-      ]
-    }
-    worker = {
-      node_name  = "proxmox"
-      vm_id_base = 222
-      name_base  = "worker"
-      clone_vm_id = 9300
-      cpu_cores  = 2
-      ram_mb     = 4096
-      ip_base    = 21
-      disks = [
-        { datastore_id = "local", interface = "scsi0", size = 32 }
-      ]
-    }
+    super  = []
+    master = [
+      {
+        node_name   = "local"
+        vm_id       = 211
+        name        = "controlplan-1"
+        clone_vm_id = 9000
+        cpu_cores   = 2
+        ram_mb      = 2048
+        ip          = 11
+        disks = [
+          { datastore_id = "master", interface = "scsi0", size = 32 }
+        ]
+      },
+      {
+        node_name   = "proxmox"
+        vm_id       = 212
+        name        = "controlplan-2"
+        clone_vm_id = 9300
+        cpu_cores   = 2
+        ram_mb      = 2048
+        ip          = 12
+        disks = [
+          { datastore_id = "local", interface = "scsi0", size = 32 }
+        ]
+      }
+    ]
+    worker = [
+      {
+        node_name   = "local"
+        vm_id       = 221
+        name        = "worker-1"
+        clone_vm_id = 9100
+        cpu_cores   = 2
+        ram_mb      = 4096
+        ip          = 21
+        disks = [
+          { datastore_id = "worker", interface = "scsi0", size = 32 }
+        ]
+      },
+      {
+        node_name   = "proxmox"
+        vm_id       = 222
+        name        = "worker-2"
+        clone_vm_id = 9300
+        cpu_cores   = 2
+        ram_mb      = 4096
+        ip          = 22
+        disks = [
+          { datastore_id = "local", interface = "scsi0", size = 32 }
+        ]
+      }
+    ]
   }
 }
