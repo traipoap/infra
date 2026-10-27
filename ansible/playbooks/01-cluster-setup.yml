@@ -86,8 +86,7 @@
               --node-ip={{ ansible_facts.default_ipv4.address }} \
               --write-kubeconfig-mode 644 \
               --disable=traefik \
-              --disable=local-storage \
-              --disable-agent \
+              --disable=local-storage
 
         - name: Execute K3s Server Join
           shell: /tmp/k3s_server_join.sh
