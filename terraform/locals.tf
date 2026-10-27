@@ -1,42 +1,42 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# Generate the node list from counts + per-role specs
+# Generate the node list from the per-role spec lists (one entry = one VM)
 locals {
   cluster_nodes = merge(
-    { for i in range(var.cluster_node_counts.super) : "super-node-${i + 1}" => {
-        node_name   = var.cluster_node_specs.super.node_name
-        vm_id       = var.cluster_node_specs.super.vm_id_base + i
+    { for entry in var.cluster_node_specs.super : entry.name => {
+        node_name   = entry.node_name
+        vm_id       = entry.vm_id
         role        = "super"
-        cpu_cores   = var.cluster_node_specs.super.cpu_cores
-        ram_mb      = var.cluster_node_specs.super.ram_mb
-        ip_offset   = var.cluster_node_specs.super.ip_base + i
-        hostname    = "super-node-${i + 1}"
-        clone_vm_id = var.cluster_node_specs.super.clone_vm_id
-        disks       = var.cluster_node_specs.super.disks
+        cpu_cores   = entry.cpu_cores
+        ram_mb      = entry.ram_mb
+        ip_offset   = entry.ip
+        hostname    = entry.name
+        clone_vm_id = entry.clone_vm_id
+        disks       = entry.disks
       }
     },
-    { for i in range(var.cluster_node_counts.master) : "controlplan-${i + 1}" => {
-        node_name   = var.cluster_node_specs.master.node_name
-        vm_id       = var.cluster_node_specs.master.vm_id_base + i
+    { for entry in var.cluster_node_specs.master : entry.name => {
+        node_name   = entry.node_name
+        vm_id       = entry.vm_id
         role        = "master"
-        cpu_cores   = var.cluster_node_specs.master.cpu_cores
-        ram_mb      = var.cluster_node_specs.master.ram_mb
-        ip_offset   = var.cluster_node_specs.master.ip_base + i
-        hostname    = "controlplan-${i + 1}"
-        clone_vm_id = var.cluster_node_specs.master.clone_vm_id
-        disks       = var.cluster_node_specs.master.disks
+        cpu_cores   = entry.cpu_cores
+        ram_mb      = entry.ram_mb
+        ip_offset   = entry.ip
+        hostname    = entry.name
+        clone_vm_id = entry.clone_vm_id
+        disks       = entry.disks
       }
     },
-    { for i in range(var.cluster_node_counts.worker) : "k3s-worker-${i + 1}" => {
-        node_name   = var.cluster_node_specs.worker.node_name
-        vm_id       = var.cluster_node_specs.worker.vm_id_base + i
+    { for entry in var.cluster_node_specs.worker : entry.name => {
+        node_name   = entry.node_name
+        vm_id       = entry.vm_id
         role        = "worker"
-        cpu_cores   = var.cluster_node_specs.worker.cpu_cores
-        ram_mb      = var.cluster_node_specs.worker.ram_mb
-        ip_offset   = var.cluster_node_specs.worker.ip_base + i
-        hostname    = "k3s-worker-${i + 1}"
-        clone_vm_id = var.cluster_node_specs.worker.clone_vm_id
-        disks       = var.cluster_node_specs.worker.disks
+        cpu_cores   = entry.cpu_cores
+        ram_mb      = entry.ram_mb
+        ip_offset   = entry.ip
+        hostname    = entry.name
+        clone_vm_id = entry.clone_vm_id
+        disks       = entry.disks
       }
     }
   )
