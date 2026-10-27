@@ -4,6 +4,7 @@
       shell: |
         curl -sfL https://get.k3s.io | sh -s - server \
           --node-ip={{ groups['k3s_masters'][0] }} \
+          --tls-san={{ (groups['load_balance'] + groups['k3s_masters']) | first }} \
           --write-kubeconfig-mode 644 \
           --cluster-init \
           --disable=traefik \
