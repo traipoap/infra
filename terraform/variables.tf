@@ -131,7 +131,7 @@ variable "cluster_node_specs" {
         name        = "worker-1"
         clone_vm_id = 9100
         cpu_cores   = 2
-        ram_mb      = 4096
+        ram_mb      = 8192
         ip          = 21
         disks = [
           { datastore_id = "worker", interface = "scsi0", size = 32 }
@@ -143,7 +143,7 @@ variable "cluster_node_specs" {
         name        = "worker-2"
         clone_vm_id = 9300
         cpu_cores   = 2
-        ram_mb      = 4096
+        ram_mb      = 8192
         ip          = 22
         disks = [
           { datastore_id = "local", interface = "scsi0", size = 32 }
