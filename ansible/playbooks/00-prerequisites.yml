@@ -3,6 +3,9 @@
 - name: Disable IPv6
   hosts: all
   become: true
+  roles:
+  - common
+
   tasks:
     - name: Disable IPv6
       sysctl:

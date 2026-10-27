@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Disk/partition to use for NFS (choose it yourself, verify with `lsblk`)
+#   - Leave EMPTY  -> NFS runs on a plain directory on the root filesystem
+#                     (no dedicated disk; fine for small/shared datasets)
+#   - /dev/nvme0n1p3 + nfs_create_partition=false -> existing free partition
+#   - /dev/sdb       + nfs_create_partition=true  -> a whole new disk
+# NOTE: never point this at /dev/nvme0n1p2 (that is the system root "/").
+nfs_disk_device: ""
+
+# If the device above is a WHOLE disk, create partition 1 on it first.
+nfs_create_partition: false
+
+# Where to mount / export from
+nfs_mount_point: /nfs
+
+# Filesystem type (used only when nfs_disk_device is set)
+nfs_fs_type: ext4

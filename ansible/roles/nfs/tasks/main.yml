@@ -1,60 +1,77 @@
 # SPDX-License-Identifier: Apache-2.0
 
-  # 0. Find disk by size 100G automatically
-  - name: Find disk by size 100G automatically
-    set_fact:
-      target_disk: "/dev/{{ item.key }}"
-    loop: "{{ ansible_facts['devices'] | dict2items }}"
-    when: "'64' in item.value.size"
+# 0. Validate the user-chosen device (skipped when nfs_disk_device is empty
+#    = just export a plain directory on the root filesystem, no dedicated disk)
+- name: Check that {{ nfs_disk_device }} exists on this host
+  assert:
+    that:
+      - item in (ansible_facts.devices | dict2items | map(attribute='key') | list
+        + ansible_facts.partitions | dict2items | map(attribute='key') | list)
+    fail_msg: >-
+      Device {{ nfs_disk_device }} not found on this host.
+      Run `lsblk` and set nfs_disk_device to a valid disk/partition path.
+  vars:
+    item: "{{ nfs_disk_device | regex_replace('^/dev/', '') }}"
+  when: nfs_disk_device | length > 0
 
-  # 1. Update and Install Core Packages
-  - name: Install fundamental packages (NFS)
-    apt:
-      update_cache: yes
-      name:
-        - parted
-        - nfs-kernel-server
-      state: present
+- name: Refuse to use a device that is currently in use (mounted)
+  assert:
+    that:
+      - nfs_disk_device not in (ansible_facts.mounts | default([]) | map(attribute='device') | list)
+    fail_msg: >-
+      Device {{ nfs_disk_device }} is currently mounted/in use.
+      Refusing to format it. Pick a free partition or an extra disk instead.
+  when: nfs_disk_device | length > 0
 
-  # 2. Configure NFS Server
-  - name: Create NFS export directory
-    file:
-      path: "{{ nfs_mount_point }}"
-      state: directory
-      mode: '0777'
+# 1. Update and Install Core Packages
+- name: Install fundamental packages (NFS)
+  apt:
+    update_cache: yes
+    name:
+      - parted
+      - nfs-kernel-server
+    state: present
 
-  - name: Configure /etc/exports for NFS
-    template:
-      src: "exports.j2"
-      dest: "/etc/exports"
-    notify: Restart NFS
+# 2. DISK PREPARATION (partition + format, only if a dedicated disk is chosen)
+- name: Create partition on {{ nfs_disk_device }} (whole disk only)
+  parted:
+    device: "{{ nfs_disk_device }}"
+    number: 1
+    state: present
+    label: msdos
+  when:
+    - nfs_disk_device | length > 0
+    - nfs_create_partition
 
-  # 3. DISK PREPARATION (The most important part for sda or sdb) ---
-  - name: Check if {{ target_disk }} is already partitioned
-    command: lsblk {{ target_disk }}
-    register: lsblk_output
-    changed_when: false
+- name: Set final block device path
+  set_fact:
+    nfs_block_device: "{{ nfs_disk_device ~ '1' if nfs_create_partition else nfs_disk_device }}"
+  when: nfs_disk_device | length > 0
 
-  - name: Create partition on {{ target_disk }} (Single large partition for both NFS and Garage)
-    parted:
-      device: "{{ target_disk }}"
-      number: 1
-      state: present
-      label: msdos
+- name: Format {{ nfs_block_device }} as {{ nfs_fs_type }}
+  filesystem:
+    fstype: "{{ nfs_fs_type }}"
+    dev: "{{ nfs_block_device }}"
+  when: nfs_disk_device | length > 0
 
-  - name: Format {{ target_disk }}1 as ext4
-    filesystem:
-      fstype: ext4
-      dev: "{{ target_disk }}1"
+# 3. Mount it (skipped when there is no dedicated disk)
+- name: Create mount point for {{ nfs_block_device }}
+  file:
+    path: "{{ nfs_mount_point }}"
+    state: directory
+    mode: '0777'
 
-  - name: Create mount point for {{ target_disk }}1
-    file:
-      path: "{{nfs_mount_point}}"
-      state: directory
+- name: Mount {{ nfs_block_device }} to {{ nfs_mount_point }}
+  mount:
+    path: "{{ nfs_mount_point }}"
+    src: "{{ nfs_block_device }}"
+    fstype: "{{ nfs_fs_type }}"
+    state: mounted
+  when: nfs_disk_device | length > 0
 
-  - name: Mount {{ target_disk }}1 to {{nfs_mount_point}}
-    mount:
-      path: "{{nfs_mount_point}}"
-      src: "{{ target_disk }}1"
-      fstype: ext4
-      state: mounted
+# 4. Configure NFS Server
+- name: Configure /etc/exports for NFS
+  template:
+    src: "exports.j2"
+    dest: "/etc/exports"
+  notify: Restart NFS

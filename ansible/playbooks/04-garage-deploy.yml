@@ -15,8 +15,8 @@
 
     garage_local_template: "garage.toml.j2"
     garage_config_file: "/etc/garage.toml"
-    garage_metadata_dir: "/var/lib/garage"
-    garage_data_dir: "/nfs/data"
+    garage_metadata_dir: "/s3/meta"
+    garage_data_dir: "/s3/data"
 
     # Priority: 1) env var → 2) user input → 3) auto-generate
     rpc_secret_env: "{{ lookup('env', 'RPC_SECRET') }}"

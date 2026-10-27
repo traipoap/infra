@@ -6,6 +6,14 @@
       update_cache: yes
       name:
         - haproxy
+        - git
+        - btop
+        - fish
+        - curl
+        - net-tools
+        - nfs-common
+        - tree
+
       state: present
 
   # 2. Configure HAProxy

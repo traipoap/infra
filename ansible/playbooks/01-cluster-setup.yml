@@ -4,7 +4,6 @@
   hosts: load_balance
   become: true
   roles:
-    - common
     - load-balance
 
   handlers:
@@ -20,7 +19,7 @@
     # - runtime
     - role: k3s-server
       when: is_first_master
-    - common
+
   tasks:
     - name: Fetch kubeconfig from Master
       fetch:
@@ -87,7 +86,8 @@
               --node-ip={{ ansible_facts.default_ipv4.address }} \
               --write-kubeconfig-mode 644 \
               --disable=traefik \
-              --disable=local-storage
+              --disable=local-storage \
+              --disable-agent \
 
         - name: Execute K3s Server Join
           shell: /tmp/k3s_server_join.sh
@@ -123,7 +123,6 @@
   roles:
     # - runtime
     - k3s-agent
-    - common
 
 - name: Replace server kubeconfig playbooks/files/k3s-kubeconfig.yaml
   hosts: localhost
