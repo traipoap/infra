@@ -23,7 +23,7 @@
             content: |
               #!/bin/bash
               curl -sfL https://get.k3s.io | K3S_URL=https://{{ master_ip }}:6443 K3S_TOKEN={{ cluster_token }} sh -s - agent \
-              --node-ip={{ ansible_facts.default_ipv4.address }}
+              --bind-address={{ k3s_node_ip | default(inventory_hostname) }} --node-ip={{ k3s_node_ip | default(inventory_hostname) }}
 
         - name: Execute K3s Agent Installation
           shell: /tmp/k3s_install.sh
