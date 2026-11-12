@@ -1,8 +1,10 @@
 [load_balance]
+192.168.1.9 ansible_user=traipoap
 
 [k3s_masters]
 192.168.1.11 ansible_user=traipoap
 192.168.1.12 ansible_user=traipoap
+192.168.1.13 ansible_user=traipoap
 
 [k3s_workers]
 192.168.1.21 ansible_user=traipoap

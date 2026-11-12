@@ -8,7 +8,8 @@
           --write-kubeconfig-mode 644 \
           --cluster-init \
           --disable=traefik \
-          --disable=local-storage
+          --disable=local-storage \
+          --disable=servicelb \
 
       args:
         creates: /usr/local/bin/k3s

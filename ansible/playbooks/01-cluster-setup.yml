@@ -16,7 +16,7 @@
   vars:
     is_first_master: "{{ inventory_hostname == groups['k3s_masters'][0] }}"
   roles:
-    # - runtime
+    - runtime
     - role: k3s-server
       when: is_first_master
 
@@ -102,7 +102,8 @@
               --tls-san={{ k3s_api_sans }} \
               --write-kubeconfig-mode 644 \
               --disable=traefik \
-              --disable=local-storage
+              --disable=local-storage \
+              --disable=servicelb \
 
         - name: Execute K3s Server Join
           shell: /tmp/k3s_server_join.sh
@@ -159,7 +160,7 @@
     # Explicit node identity for the agent (same heuristic-IP rationale as the master join)
     k3s_node_ip: "{{ hostvars[inventory_hostname].k3s_node_ip | default(inventory_hostname) }}"
   roles:
-    # - runtime
+    - runtime
     - k3s-agent
 
 - name: Replace server kubeconfig playbooks/files/k3s-kubeconfig.yaml
