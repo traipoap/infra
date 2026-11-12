@@ -44,14 +44,9 @@ backend webservers
     mode http
     cookie JSESSIONID insert indirect nocache
 
-%{ for i, ip in master_nodes ~}
-    server m${i + 1} ${ip}:80 check cookie m${i + 1}
-%{ endfor ~}
-
 %{ for i, ip in worker_nodes ~}
     server w${i + 1} ${ip}:80 check cookie w${i + 1}
 %{ endfor ~}
-
 
 # =====================================================================
 # 1. HANDLE TCP SYSLOG (Port 514)
@@ -65,10 +60,6 @@ frontend syslog_tcp_in
 backend syslog_tcp_backend
     mode tcp
     balance source
-
-%{ for i, ip in master_nodes ~}
-    server m${i + 1} ${ip}:30514 check
-%{ endfor ~}
 
 %{ for i, ip in worker_nodes ~}
     server w${i + 1} ${ip}:30514 check
@@ -90,10 +81,6 @@ backend syslog_udp_backend
     balance roundrobin
 
     # Note the 'udp@' prefix required for UDP destinations
-
-%{ for i, ip in master_nodes ~}
-    server m${i + 1} udp@${ip}:30514
-%{ endfor ~}
 
 %{ for i, ip in worker_nodes ~}
     server w${i + 1} udp@${ip}:30514

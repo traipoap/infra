@@ -100,15 +100,15 @@ variable "cluster_node_specs" {
     super  = []
     master = [
       {
-        node_name   = "local"
+        node_name   = "proxmox-02"
         vm_id       = 211
         name        = "controlplan-1"
-        clone_vm_id = 9000
+        clone_vm_id = 9400
         cpu_cores   = 2
         ram_mb      = 4098
         ip          = 11
         disks = [
-          { datastore_id = "master", interface = "scsi0", size = 32 }
+          { datastore_id = "local", interface = "scsi0", size = 32 }
         ]
       },
       {
@@ -122,8 +122,21 @@ variable "cluster_node_specs" {
         disks = [
           { datastore_id = "local", interface = "scsi0", size = 32 }
         ]
-      }
+      },
+    {
+      node_name   = "local"
+      vm_id       = 213
+      name        = "controlplan-3"
+      clone_vm_id = 9100
+      cpu_cores   = 2
+      ram_mb      = 4098
+      ip          = 13
+      disks = [
+        { datastore_id = "worker", interface = "scsi0", size = 32 }
+      ]
+    }
     ]
+
     worker = [
       {
         node_name   = "local"
