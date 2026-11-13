@@ -46,6 +46,7 @@ backend webservers
 
     server w1 192.168.1.21:80 check cookie w1
     server w2 192.168.1.22:80 check cookie w2
+    server w3 192.168.1.23:80 check cookie w3
 
 # =====================================================================
 # 1. HANDLE TCP SYSLOG (Port 514)
@@ -62,6 +63,7 @@ backend syslog_tcp_backend
 
     server w1 192.168.1.21:30514 check
     server w2 192.168.1.22:30514 check
+    server w3 192.168.1.23:30514 check
 
 # =====================================================================
 # 2. HANDLE UDP SYSLOG (Port 514)
@@ -82,6 +84,7 @@ backend syslog_udp_backend
 
     server w1 udp@192.168.1.21:30514
     server w2 udp@192.168.1.22:30514
+    server w3 udp@192.168.1.23:30514
 
 # =====================================================================
 # 3. KUBERNETES API (kubectl) — LB -> Control Plane (Port 6443)

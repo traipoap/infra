@@ -161,6 +161,18 @@ variable "cluster_node_specs" {
         disks = [
           { datastore_id = "local", interface = "scsi0", size = 32 }
         ]
+      },
+      {
+        node_name   = "proxmox-02"
+        vm_id       = 223
+        name        = "worker-3"
+        clone_vm_id = 9400
+        cpu_cores   = 2
+        ram_mb      = 8192
+        ip          = 23
+        disks = [
+          { datastore_id = "local", interface = "scsi0", size = 32 }
+        ]
       }
     ]
   }
