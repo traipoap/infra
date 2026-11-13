@@ -103,7 +103,6 @@
               --write-kubeconfig-mode 644 \
               --disable=traefik \
               --disable=local-storage \
-              --disable=servicelb \
 
         - name: Execute K3s Server Join
           shell: /tmp/k3s_server_join.sh
