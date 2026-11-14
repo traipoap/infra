@@ -97,7 +97,20 @@ variable "cluster_node_specs" {
     }))
   })))
   default = {
-    super  = []
+    super  = [
+      {
+        node_name   = "proxmox-04"
+        vm_id       = 111
+        name        = "edge"
+        clone_vm_id = 9500
+        cpu_cores   = 2
+        ram_mb      = 4098
+        ip          = 9
+        disks = [
+          { datastore_id = "local", interface = "scsi0", size = 32 }
+        ]
+      }
+    ]
     master = [
       {
         node_name   = "proxmox-02"
