@@ -48,20 +48,20 @@
     nfs_block_device: "{{ nfs_disk_device ~ '1' if nfs_create_partition else nfs_disk_device }}"
   when: nfs_disk_device | length > 0
 
-- name: Format {{ nfs_block_device }} as {{ nfs_fs_type }}
+- name: Format the NFS disk as {{ nfs_fs_type }}
   filesystem:
     fstype: "{{ nfs_fs_type }}"
     dev: "{{ nfs_block_device }}"
   when: nfs_disk_device | length > 0
 
 # 3. Mount it (skipped when there is no dedicated disk)
-- name: Create mount point for {{ nfs_block_device }}
+- name: Create the NFS mount point
   file:
     path: "{{ nfs_mount_point }}"
     state: directory
     mode: '0777'
 
-- name: Mount {{ nfs_block_device }} to {{ nfs_mount_point }}
+- name: Mount the NFS disk at {{ nfs_mount_point }}
   mount:
     path: "{{ nfs_mount_point }}"
     src: "{{ nfs_block_device }}"
