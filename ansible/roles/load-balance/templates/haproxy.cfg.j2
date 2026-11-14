@@ -93,17 +93,18 @@ frontend kubernetes_api
     bind :6443
     mode tcp
     option tcplog
-    # K8s watches are long-lived; override the 50s defaults so idle streams aren't dropped
+    option tcpka
     timeout client 1h
-    timeout server 1h
     default_backend kubernetes_api
 
 backend kubernetes_api
     mode tcp
+    option tcpka
+    option ssl-hello-chk
     balance roundrobin
-    stick-table type ip size 200k expire 30m
-    stick on src
+    timeout connect 5s
+    timeout server 1h
 
-    server m1 192.168.1.11:6443 check inter 2000 fall 3 rise 5
-    server m2 192.168.1.12:6443 check inter 2000 fall 3 rise 5
-    server m3 192.168.1.13:6443 check inter 2000 fall 3 rise 5
+    server m1 192.168.1.11:6443 check inter 5000 fall 3 rise 2
+    server m2 192.168.1.12:6443 check inter 5000 fall 3 rise 2
+    server m3 192.168.1.13:6443 check inter 5000 fall 3 rise 2
