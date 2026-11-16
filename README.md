@@ -5,25 +5,8 @@
 ![IaC](https://img.shields.io/badge/IaC-Terraform%20%7C%20Ansible-7b42bc)
 ![Service%20Mesh](https://img.shields.io/badge/Mesh-Istio%20(ambient)-46489f)
 ![Storage](https://img.shields.io/badge/Storage-NFS%20%7C%20Garage-3269a1)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-A fully declarative lab platform for Kubernetes on Proxmox. Terraform clones virtual machines from template VMs and renders the Ansible inventory, then Ansible assembles everything on top: a K3s cluster (embedded etcd, HA-capable), Istio service mesh with the Gateway API, HAProxy load balancing and syslog relay, NFS + Garage (S3) storage, and a GitOps control plane bootstrapped with FluxCD from GitHub.
-
-Everything is repeatable from this repository — one `terraform apply` and one script run build the whole platform, and `terraform destroy` tears it down.
-
-## Features
-
-- Provision Proxmox VMs with Terraform (cloned from template VMs, cloud-init configured, SSH-ready gated)
-- Scale the cluster by changing node **counts per role** — names, VM IDs, and IPs are generated
-- Render the Ansible inventory and HAProxy config directly from Terraform state
-- Bootstrap a K3s cluster: first master initializes with embedded etcd, extra masters and workers join with a shared token
-- Multi-runtime container support: **crun** as default runtime, **youki** exposed as a `RuntimeClass`
-- Istio service mesh (ambient profile) + Kubernetes **Gateway API** for ingress
-- HAProxy L7 load balancer (sticky sessions) and syslog relay (TCP + UDP)
-- Shared storage tiers: NFS export for shared state, **Garage** for S3-compatible object storage
-- GitOps with **FluxCD** bootstrapped from GitHub, with image auto-updating and source watching enabled
-- One-command bootstrap (`quickstart.sh`) with per-playbook timing and logs
-- Secrets stay out of git: Terraform reads `*.tfvars`, Ansible reads environment variables
+A Kubernetes lab platform on Proxmox. Terraform clones VMs from template VMs and renders the Ansible inventory and HAProxy config; Ansible builds a K3s cluster (embedded etcd, HA), Istio (ambient) + Gateway API, HAProxy L7 load balancing + syslog relay, NFS + Garage (S3) storage, and bootstraps FluxCD from GitHub. `terraform apply` builds the platform, `terraform destroy` tears it down.
 
 ## Architecture
 
@@ -46,47 +29,50 @@ flowchart TD
 
 | Role | Runs | Default spec |
 |---|---|---|
-| `super-node` | HAProxy (L7 LB + syslog relay), NFS server, Garage (S3) | 1 vCPU, 2 GB RAM, 32 GB + 100 GB disks |
-| `controlplan` | K3s control plane (embedded etcd), FluxCD, Istio control plane | 2 vCPU, 8 GB RAM, 32 GB disk |
-| `k3s-worker` | K3s agents, workload pods | 2 vCPU, 8 GB RAM, 32 GB disk |
+| `super` (LB) | HAProxy (L7 LB + syslog relay), NFS server, Garage (S3) | not in defaults — add entries to `cluster_node_specs.super` |
+| `master` | K3s control plane (embedded etcd), FluxCD, Istio control plane | 2 vCPU, 4 GB RAM, 32 GB disk |
+| `worker` | K3s agents, workload pods | 2 vCPU, 8 GB RAM, 32 GB disk |
 
-### Default nodes (one per role)
+### Default nodes (from `terraform/variables.tf`)
 
-| Name | VM ID | IP | Cloned from |
-|---|---|---|---|
-| `super-node-1` | 200 | 10.10.16.4 | template 2000 |
-| `controlplan-1` | 210 | 10.10.16.11 | template 4000 |
-| `k3s-worker-1` | 220 | 10.10.16.21 | template 3000 |
+| Name | VM ID | PVE node | IP | Cloned from |
+|---|---|---|---|---|
+| `controlplan-1` | 211 | proxmox-02 | 192.168.1.11 | 9400 |
+| `controlplan-2` | 212 | proxmox | 192.168.1.12 | 9300 |
+| `controlplan-3` | 213 | local | 192.168.1.13 | 9100 |
+| `worker-1` | 221 | local | 192.168.1.21 | 9100 |
+| `worker-2` | 222 | proxmox | 192.168.1.22 | 9300 |
+| `worker-3` | 223 | proxmox-02 | 192.168.1.23 | 9400 |
 
 ### Scaling
 
-Set `var.cluster_node_counts` (e.g. `{ super = 1, master = 3, worker = 3 }`) and per-role sizing in `var.cluster_node_specs`. Node *N* (1-based) of a role gets name `<name_base>-N`, VM ID `<vm_id_base> + (N-1)`, and IP `<ip_base> + (N-1)` in `var.cluster_subnet`. Terraform fails early if two roles' IP ranges would overlap.
+`cluster_node_specs` is a map of role → **list** of VM specs, one entry = one VM (a map key holds only one value, hence the list). Add or remove entries to scale a role; set `node_name` per entry to spread VMs across PVE hosts. `locals.tf` fails early if two roles' IP ranges overlap.
 
 ## Architecture Decisions
 
 | # | Decision | Why |
 |---|---|---|
-| 1 | K3s instead of full Kubernetes | Single binary, low memory, built-in etcd, works with Helm and the Gateway API. |
-| 2 | HA via embedded etcd | No separate database. First master initializes; the rest join with a shared token. |
-| 3 | One "super-node" for LB + NFS + S3 | Limited lab VMs — edge services share one VM to save RAM and disks. |
-| 4 | Terraform owns VMs, Ansible owns software | Clean split: Terraform manages infrastructure state, Ansible manages software state. |
-| 5 | Count-based node generation | Change a few numbers to scale; names, VM IDs, IPs, and the inventory are all derived. |
-| 6 | Clone from template VMs | Fast and consistent provisioning; cloud-init only sets hostname, user, SSH keys, and IP. |
-| 7 | Terraform renders the Ansible inventory + HAProxy config | No manual drift between topology and config — both come from the same variables. |
-| 8 | Disable Traefik and K3s local storage | Ingress is handled by Gateway API/Istio, storage by NFS/Garage — no redundant components. |
-| 9 | crun default + youki RuntimeClass | Experiment with alternative OCI runtimes from plain Kubernetes `runtimeClassName`. |
-| 10 | Istio **ambient** + Gateway API | Lightweight mesh with mTLS and a standards-based ingress API instead of sidecars everywhere. |
-| 11 | Two storage tiers: NFS + Garage | NFS for shared file state, Garage for S3 objects — both live on the data-heavy super-node. |
-| 12 | GitOps with FluxCD | `flux bootstrap github` binds the cluster to a repo; extra components (image-reflector, image-automation, source-watcher) enable automatic image updates. |
-| 13 | Secrets outside git | Terraform reads `secrets.auto.tfvars` (gitignored); Ansible reads env vars (`APP_GIT_SECRET`, Garage keys). |
-| 14 | Syslog fan-out through HAProxy | One entry point (`:514` TCP/UDP) balanced across all K8s nodes (`:30514`) for centralized log shipping. |
+| 1 | K3s instead of full Kubernetes | Single binary, low memory, built-in etcd, works with Helm and the Gateway API |
+| 2 | HA via embedded etcd | No separate database; first master initializes, the rest join with a shared token |
+| 3 | One "super-node" for LB + NFS + S3 | Lab has limited VMs — edge services share one VM to save RAM and disks |
+| 4 | Terraform owns VMs, Ansible owns software | Clean split: infrastructure state vs. software state |
+| 5 | Per-VM spec entries | Scaling = adding/removing list entries; names, VM IDs, and IPs are explicit per VM |
+| 6 | Clone from template VMs | Fast, consistent provisioning; cloud-init only sets hostname, user, SSH keys, and IP |
+| 7 | Terraform renders the Ansible inventory + HAProxy config | No drift between topology and config — both come from the same variables |
+| 8 | Disable Traefik and K3s local storage | Ingress via Gateway API/Istio, storage via NFS/Garage — no redundant components |
+| 9 | crun default + youki `RuntimeClass` | Try alternative OCI runtimes via plain `runtimeClassName` |
+| 10 | Istio ambient + Gateway API | Lightweight mesh with mTLS and a standards-based ingress API, no sidecars everywhere |
+| 11 | Two storage tiers: NFS + Garage | NFS for shared file state, Garage for S3 objects |
+| 12 | GitOps with FluxCD | `flux bootstrap github` binds the cluster to a repo; extra controllers enable automatic image updates |
+| 13 | Secrets outside git | Terraform reads `secrets.auto.tfvars` (gitignored); Ansible reads env vars |
+| 14 | Syslog fan-out through HAProxy | One entry point (`:514` TCP/UDP) balanced across all K8s nodes (`:30514`) |
 
 ## Tech Stack
 
 | Category | Tools |
 |---|---|
 | Infrastructure | Proxmox VE, Terraform (`bpg/proxmox` 0.111.1, HCP remote state), Ansible |
-| Kubernetes | K3s (embedded etcd), Istio 1.30 (ambient), Gateway API v1.6 (experimental) |
+| Kubernetes | K3s (embedded etcd), Istio 1.30 (ambient), Gateway API v1.6 |
 | Container runtimes | crun (default), youki 0.7 (`RuntimeClass`) |
 | Edge / logging | HAProxy (L7 LB, stats, syslog relay) |
 | Storage | nfs-kernel-server, Garage 2.3.0 (S3-compatible) |
@@ -108,7 +94,7 @@ Set `var.cluster_node_counts` (e.g. `{ super = 1, master = 3, worker = 3 }`) and
 │   │   ├── 04-garage-deploy.yml           # Garage S3 on the super-node
 │   │   ├── 05-gitops-bootstrap.yml        # FluxCD bootstrap from GitHub
 │   │   ├── quickstart.sh                  # runs all playbooks in order
-│   │   └── files/                         # fetched kubeconfig (k3s-kubeconfig.yaml, gitignored)
+│   │   └── files/                         # fetched kubeconfig (gitignored)
 │   └── roles/
 │       ├── common/                        # base packages, qemu-guest-agent
 │       ├── fluxcd/                        # Flux CLI + GitHub bootstrap
@@ -122,14 +108,13 @@ Set `var.cluster_node_counts` (e.g. `{ super = 1, master = 3, worker = 3 }`) and
 ├── terraform/
 │   ├── backend.tf                         # HCP Terraform (org: traipoap, workspace: proxmox)
 │   ├── provider.tf                        # bpg/proxmox (SSH agent mode)
-│   ├── variables.tf                       # networking + per-role node specs
-│   ├── locals.tf                          # generates names/VM IDs/IPs from counts
+│   ├── variables.tf                       # networking + per-role VM spec lists
+│   ├── locals.tf                          # flattens specs into the node map
 │   ├── main.tf                            # clone VMs, cloud-init, wait for SSH, render files
 │   ├── secrets.auto.tfvars                # gitignored — password + SSH keys
 │   └── templates/
 │       ├── hosts.tpl                      # → ansible/inventory/hosts
 │       └── haproxy.tpl                    # → ansible/roles/load-balance/templates/haproxy.cfg.j2
-├── LICENSE
 └── README.md
 ```
 
@@ -138,13 +123,13 @@ Set `var.cluster_node_counts` (e.g. `{ super = 1, master = 3, worker = 3 }`) and
 ### Prerequisites
 
 - A Proxmox VE host with:
-  - Template VMs available for cloning: **2000** (super-node), **4000** (master), **3000** (worker) — or adjust `cluster_node_specs.*.clone_vm_id`
-  - A bridge (default `vmbr16`) on the cluster subnet (default `10.10.16.0/24`, gateway `10.10.16.1`)
-  - Datastores used in the default specs: `data-st1000`, `system-hs512`, `st500`
+  - Template VMs for cloning: **9100, 9300, 9400** — or adjust `clone_vm_id` per entry in `cluster_node_specs`
+  - A bridge (default `vmbr0`) on the cluster subnet (default `192.168.1.0/24`, gateway `192.168.1.1`)
+  - Datastores used in the default specs: `local`, `worker`
 - A Proxmox user with API access
-- Terraform CLI and an HCP Terraform account (backend: org `traipoap`, workspace `proxmox`) — or switch `backend.tf` to a local backend
-- Ansible on the control machine, and key-based SSH access to the VMs (the cloud-init snippet injects your keys)
-- A GitHub repository for Flux (default: `traipoap/gitops`) and a personal access token with **read/write contents** permission (Flux bootstraps with `--read-write-key`)
+- Terraform CLI and an HCP Terraform account (org `traipoap`, workspace `proxmox`) — or switch `backend.tf` to a local backend
+- Ansible on the control machine, with key-based SSH to the VMs (cloud-init injects your keys)
+- A GitHub repository for Flux (default: `traipoap/gitops`) and a PAT with **read/write contents** (`--read-write-key`)
 
 ### 1. Clone the repository
 
@@ -161,16 +146,15 @@ proxmox_password = "CHANGE_ME"
 ssh_public_keys  = ["ssh-ed25519 AAAA... you@example.com"]
 ```
 
-Anything else (endpoint, usernames, node counts, specs, networking) is a regular variable with defaults in `variables.tf` — override via `terraform.tfvars` or `-var` as needed. Key variables:
+Everything else has defaults in `variables.tf` — override via `terraform.tfvars` or `-var` as needed:
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `proxmox_endpoint` | `https://proxmox.example.com` | Proxmox API endpoint |
 | `proxmox_username` / `proxmox_ssh_username` | `example@pam` / `example` | API and SSH usernames |
 | `ssh_username` | `example` | User created on every VM via cloud-init |
-| `network_bridge` / `cluster_subnet` / `gateway_ip` | `vmbr16` / `10.10.16.0/24` / `10.10.16.1` | VM networking |
-| `cluster_node_counts` | `{ super = 1, master = 1, worker = 1 }` | How many VMs per role |
-| `cluster_node_specs` | see `variables.tf` | vCPU, RAM, disks, name/VM-ID/IP bases per role |
+| `network_bridge` / `cluster_subnet` / `gateway_ip` | `vmbr0` / `192.168.1.0/24` / `192.168.1.1` | VM networking |
+| `cluster_node_specs` | see `variables.tf` | Per-VM list per role: name, VM ID, PVE node, CPU, RAM, IP, disks, clone source |
 | `timezone` | `Asia/Bangkok` | Set on every VM |
 
 ### 3. Provision the VMs
@@ -181,15 +165,13 @@ terraform login
 terraform apply
 ```
 
-Terraform will:
+Terraform:
 
-1. Generate per-VM cloud-init snippets (hostname, user, SSH keys, static IP)
-2. Clone and configure the VMs (CPU, RAM, disks, bridge), then **block until every node is SSH-ready**
-3. Render `../ansible/inventory/hosts` and the HAProxy config from the same node list
+1. Generates per-VM cloud-init snippets (hostname, user, SSH keys, static IP)
+2. Clones and configures the VMs (CPU, RAM, disks, bridge), then **blocks until every node is SSH-ready**
+3. Renders `../ansible/inventory/hosts` and the HAProxy config from the same node list
 
 ### 4. Run the Ansible playbooks
-
-From the `ansible/` directory, set the required secret and optionally the Garage credentials:
 
 ```bash
 cd ../ansible
@@ -203,18 +185,18 @@ export GARAGE_DEFAULT_SECRET_KEY="$(openssl rand -hex 32)"
 ./playbooks/quickstart.sh
 ```
 
-`quickstart.sh` runs the six playbooks in order (with a 15 s pause between them), stops on the first failure, and tees everything to `ansible/logs/bootstrap-<timestamp>.log`:
+`quickstart.sh` runs the playbooks in order (15 s pause between them), stops on first failure, and tees to `ansible/logs/bootstrap-<timestamp>.log`:
 
 | Playbook | What it does |
 |---|---|
 | `00-prerequisites` | Disables IPv6 on all nodes |
-| `01-cluster-setup` | Installs HAProxy on the super-node; installs K3s on the first master (`--cluster-init`, traefik/local-storage disabled), joins extra masters serially, joins workers; installs youki + crun runtimes; fetches the kubeconfig to `~/.kube/config` (server rewritten to the master IP) |
-| `02-servicemesh` | Installs Istio (ambient profile, CNI dirs tuned for K3s) and the Gateway API CRDs |
-| `03-storage-networking` | Finds the ~100 GB disk, formats ext4, mounts `/nfs`, exports it, runs nfs-kernel-server |
-| `04-garage-deploy` | Installs Garage 2.3.0 (single-node) on the super-node with a hardened systemd unit; data on `/nfs/data` |
-| `05-gitops-bootstrap` | Installs the Flux CLI and runs `flux bootstrap github` (owner `traipoap`, repo `gitops`, branch `main`, path `./clusters/staging`, `--read-write-key --personal`, plus image-reflector/image-automation/source-watcher components) |
+| `01-cluster-setup` | HAProxy on the super-node; K3s init on the first master (`--cluster-init`, traefik/local-storage disabled), serial join of extra masters and workers; youki + crun runtimes; fetches the kubeconfig to `~/.kube/config` (server rewritten to the LB IP, falling back to the first master) |
+| `02-servicemesh` | Istio (ambient profile, CNI dirs tuned for K3s) + Gateway API CRDs |
+| `03-storage-networking` | Prepares `nfs_disk_device` if set (partition + ext4 + mount), otherwise uses a plain directory on the root FS; exports `/nfs`; runs nfs-kernel-server |
+| `04-garage-deploy` | Garage 2.3.0 (single-node) with a hardened systemd unit; data on `/nfs/data` |
+| `05-gitops-bootstrap` | Flux CLI + `flux bootstrap github` (owner `traipoap`, repo `gitops`, branch `main`, path `./clusters/staging`, `--read-write-key --personal`, plus image-reflector/image-automation/source-watcher) |
 
-You can also run any playbook individually:
+Any playbook can also be run individually:
 
 ```bash
 ansible-playbook -i inventory/hosts playbooks/02-servicemesh.yml
@@ -223,12 +205,12 @@ ansible-playbook -i inventory/hosts playbooks/02-servicemesh.yml
 ### 5. Verify
 
 ```bash
-kubectl get nodes -o wide          # master + workers Ready
-kubectl get runtimeclass           # "youki" present
-curl -s http://10.10.16.4:8080     # HAProxy stats (admin:securepass)
-mc alias set garage http://10.10.16.4:3900 \
-  $GARAGE_DEFAULT_ACCESS_KEY $GARAGE_DEFAULT_SECRET_KEY   # Garage S3, see Storage section
-ssh traipoap@10.10.16.11 'flux get sources -A'            # Flux watching the repo
+kubectl get nodes -o wide            # controlplane + workers Ready
+kubectl get runtimeclass             # "youki" present
+curl -s http://<super-node>:8080     # HAProxy stats (admin:securepass)
+mc alias set garage http://<super-node>:3900 \
+  $GARAGE_DEFAULT_ACCESS_KEY $GARAGE_DEFAULT_SECRET_KEY
+ssh <user>@<master> 'flux get sources -A'   # Flux watching the repo
 ```
 
 ### Environment variables consumed by Ansible
@@ -252,41 +234,45 @@ flux bootstrap github \
   --path=./clusters/staging --read-write-key --personal
 ```
 
-- Flux provisions itself in the cluster and creates a GitHub App / PAT to sync `traipoap/gitops`
-- The watched path is `./clusters/staging` on branch `main` — commit Kubernetes manifests, Kustomizations, HelmReleases, ImagePolicies there and the cluster follows
+- Flux provisions itself and creates the GitHub credentials to sync `traipoap/gitops`
+- Watched path: `./clusters/staging` on `main` — commit Kustomizations, HelmReleases, ImagePolicies there and the cluster follows
 - `--read-write-key` lets Flux push back (e.g. Flux-generated resources)
-- The extra controllers enable **automatic image tag updates** (ImageReflectionController + ImageAutomationController) and non-K8s source watching
-- Override `github_owner` / `github_repo` / `cluster_name` in `playbooks/05-gitops-bootstrap.yml` for your own repository
+- Override `github_owner` / `github_repo` / `cluster_name` in `playbooks/05-gitops-bootstrap.yml`
 
 ## Storage
 
 ### NFS (super-node)
 
-- The ~100 GB data disk is auto-detected by size, partitioned, formatted ext4, and mounted at `/nfs`
-- Export (from `/etc/exports`): `/nfs *(rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=0)`
-- Intended for shared file state and as the backing volume for Garage
+Driven by the `nfs` role variables (`roles/nfs/defaults/main.yml`):
+
+- `nfs_disk_device` empty (default) → NFS exports a plain directory on the root filesystem
+- Set it to a whole spare disk (+ `nfs_create_partition: true`) or a free partition (+ `false`) → the role partitions, formats ext4, and mounts it at `/nfs`
+- Refuses to touch a device that is already mounted — never point it at the system root
+- Export: `/nfs *(rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=0)`
+
+Intended for shared file state and as the backing volume for Garage.
 
 ### Garage (super-node, S3-compatible)
 
-Single-node Garage 2.3.0 running under a hardened systemd unit (`ProtectSystem=strict`, `NoNewPrivileges`, private tmp):
+Single-node Garage 2.3.0 under a hardened systemd unit (`ProtectSystem=strict`, `NoNewPrivileges`, private tmp):
 
 | Endpoint | Bind | Purpose |
 |---|---|---|
 | S3 API | `:3900` | region `garage`, root domain `*.s3.garage.localhost` |
 | Web | `:3902` | root domain `*.web.garage.localhost` |
-| Admin | `[::1]:3903` | loopback only — token-protected, never exposed |
+| Admin | `[::1]:3903` | loopback only, token-protected |
 
-- Data: `/nfs/data` (the NFS disk), metadata: `/var/lib/garage`
-- A `default-bucket` is created at first start from `GARAGE_DEFAULT_ACCESS_KEY` / `GARAGE_DEFAULT_SECRET_KEY`
-- Config lives in `/etc/garage.toml`; credentials are written into the systemd unit environment
+- Data: `/nfs/data`, metadata: `/var/lib/garage`
+- `default-bucket` created at first start from the Garage keys
+- Config in `/etc/garage.toml`; credentials in the systemd unit environment
 
 ## Load Balancing & Logging (super-node)
 
 HAProxy (config rendered by Terraform from `templates/haproxy.tpl`):
 
-- **`:80`** — L7 HTTP load balancing across master + worker nodes, `balance source` with `JSESSIONID` cookie stickiness
+- **`:80`** — L7 HTTP across master + worker nodes, `balance source` with `JSESSIONID` cookie stickiness
 - **`:8080`** — stats page (`stats auth admin:securepass`)
-- **`:514` TCP + UDP** — syslog relay fan-out to every K8s node on `:30514` (UDP via `log-forward`)
+- **`:514` TCP + UDP** — syslog relay fan-out to every K8s node on `:30514`
 
 ## Service Ports
 
@@ -300,12 +286,12 @@ HAProxy (config rendered by Terraform from `templates/haproxy.tpl`):
 
 ## Security
 
-- Secrets never land in git: `secrets.auto.tfvars` is gitignored, `*.tfvars` excluded, Ansible reads env vars
-- Garage admin API is bound to loopback only; the systemd unit is sandboxed
-- IPv6 disabled across the lab, TLS 1.2+ enforced on HAProxy
-- Flux runs with a narrowly-scoped GitHub token (`--personal --read-write-key` on one repo)
+- Secrets never land in git: `secrets.auto.tfvars` is gitignored, Ansible reads env vars
+- Garage admin API bound to loopback only; systemd unit sandboxed
+- IPv6 disabled across the lab; TLS 1.2+ enforced on HAProxy
+- Flux uses a narrowly-scoped PAT (`--personal --read-write-key`) on one repo
 
-> This is a lab platform. For production: move the HAProxy stats credentials and `admin:securepass` out of the templates, restrict the NFS export to the cluster subnet, and terminate TLS at the edge.
+> Lab platform. For production: move `admin:securepass` out of the templates, restrict the NFS export to the cluster subnet, terminate TLS at the edge.
 
 ## Destroying the Cluster
 
@@ -314,27 +300,14 @@ cd terraform
 terraform destroy
 ```
 
-This removes the cloned VMs and cloud-init snippets. The template VMs, the GitHub Flux repository, and the local `~/.kube/config` are left in place.
+Removes the cloned VMs and cloud-init snippets. Template VMs, the GitHub Flux repository, and local `~/.kube/config` are left in place.
 
 ## Troubleshooting
 
-- **Terraform hangs in "Waiting for VMs to be SSH ready"** — the VM booted but the cloud-init SSH key didn't land. Check the VM's serial console; verify `ssh_public_keys` in `secrets.auto.tfvars` and the template VM's cloud-init support.
-- **`flux bootstrap github` fails in playbook 05** — `APP_GIT_SECRET` must be a PAT with read/write contents on the target repo; `ignore_errors: true` masks this, check the play log for the underlying error.
-- **Worker won't join** — playbook 01 prints the exact cause. Verify the worker can reach the first master on `:6443` and that the master token (`/var/rancher/k3s/server/node-token` on the master) is readable.
-- **`kubectl` not working locally** — playbook 01 copies the (rewritten) kubeconfig to `~/.kube/config`; re-run the last play or fetch `/etc/rancher/k3s/k3s.yaml` from the master manually.
-- **Garage credentials** — if auto-generated, the masked values appear in the playbook 04 log, the full values are in `/etc/garage.toml` and the systemd unit on the super-node.
-- **HAProxy shows no backends** — confirm `ansible/inventory/hosts` and `roles/load-balance/templates/haproxy.cfg.j2` were rendered by the latest `terraform apply` (both are generated files).
-- **Ansible logs** — every `quickstart.sh` run is captured in `ansible/logs/bootstrap-<timestamp>.log`.
-
-## Contributing
-
-Contributions are welcome!
-
-- Open an issue for bugs or ideas
-- Submit a pull request for improvements
-
-Please keep changes consistent with the existing style (Apache-2.0 headers on new files) and update the documentation.
-
-## License
-
-This project is licensed under the Apache 2.0 license — see the [LICENSE](LICENSE) file.
+- **Terraform hangs on "Waiting for VMs to be SSH ready"** — cloud-init SSH key didn't land. Check the VM's serial console, `ssh_public_keys` in `secrets.auto.tfvars`, and the template VM's cloud-init support.
+- **`flux bootstrap github` fails (playbook 05)** — `APP_GIT_SECRET` must be a PAT with read/write contents on the target repo; `ignore_errors: true` masks this — check the play log.
+- **Worker won't join** — playbook 01 prints the cause. Verify reachability to the first master on `:6443` and that the node token is readable on the master.
+- **`kubectl` not working locally** — playbook 01 copies the rewritten kubeconfig to `~/.kube/config`; re-run that play or fetch `/etc/rancher/k3s/k3s.yaml` from the master.
+- **Garage credentials** — if auto-generated, the full values are in `/etc/garage.toml` and the systemd unit on the super-node.
+- **HAProxy shows no backends** — confirm `inventory/hosts` and `haproxy.cfg.j2` were rendered by the latest `terraform apply` (both are generated files).
+- **Ansible logs** — `ansible/logs/bootstrap-<timestamp>.log`
