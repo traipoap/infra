@@ -29,7 +29,7 @@ flowchart TD
 
 | Role | Runs | Default spec |
 |---|---|---|
-| `super` (LB) | HAProxy (L7 LB + syslog relay), NFS server, Garage (S3) | not in defaults — add entries to `cluster_node_specs.super` |
+| `super` (LB) | HAProxy (L7 LB + syslog relay), NFS server, Garage (S3) | 2 vCPU, 4 GB RAM, 32 GB disk |
 | `master` | K3s control plane (embedded etcd), FluxCD, Istio control plane | 2 vCPU, 4 GB RAM, 32 GB disk |
 | `worker` | K3s agents, workload pods | 2 vCPU, 8 GB RAM, 32 GB disk |
 
@@ -37,6 +37,7 @@ flowchart TD
 
 | Name | VM ID | PVE node | IP | Cloned from |
 |---|---|---|---|---|
+| `edge` | 111 | proxmox-04 | 192.168.1.9 | 9500 |
 | `controlplan-1` | 211 | proxmox-02 | 192.168.1.11 | 9400 |
 | `controlplan-2` | 212 | proxmox | 192.168.1.12 | 9300 |
 | `controlplan-3` | 213 | local | 192.168.1.13 | 9100 |
@@ -123,7 +124,7 @@ flowchart TD
 ### Prerequisites
 
 - A Proxmox VE host with:
-  - Template VMs for cloning: **9100, 9300, 9400** — or adjust `clone_vm_id` per entry in `cluster_node_specs`
+  - Template VMs for cloning: **9100, 9300, 9400, 9500** — or adjust `clone_vm_id` per entry in `cluster_node_specs`
   - A bridge (default `vmbr0`) on the cluster subnet (default `192.168.1.0/24`, gateway `192.168.1.1`)
   - Datastores used in the default specs: `local`, `worker`
 - A Proxmox user with API access
